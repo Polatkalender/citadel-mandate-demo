@@ -4,8 +4,7 @@
 
 Payment-delegation protocols for AI agents — [AP2](https://github.com/google-agentic-commerce/AP2) (Google + 60+ orgs incl. Mastercard, PayPal, Coinbase), ACP (OpenAI + Stripe), x402 — define *how* a user authorizes an agent to pay: a signed "mandate" carrying scope and limits. **They define the format; they don't enforce it at runtime.** This is the missing piece: a gateway that cryptographically verifies the user's signed mandate and **fail-closed denies** anything out of scope — *before* a payment can happen.
 
-> _A 30-second terminal cast goes here — record it with the one command below and drop it at `docs/demo.gif`._
-<!-- ![demo](docs/demo.gif) -->
+![demo](docs/demo.gif)
 
 ## Run it (one command)
 

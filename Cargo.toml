@@ -27,6 +27,5 @@ name = "citadel-mandate-demo"
 path = "src/main.rs"
 
 [profile.release]
-opt-level = "z"
-lto = true
+# Lean for fast, reliable demo/CI builds (no fat LTO).
 strip = true

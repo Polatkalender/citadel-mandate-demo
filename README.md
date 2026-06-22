@@ -1,6 +1,6 @@
 # Citadel — Intent Mandate Enforcement (open demo)
 
-**An AI agent acting for you can spend past its limit. Citadel is a gateway that makes it physically can't.**
+**An AI agent acting for you can spend past its limit. Citadel is a gateway that makes sure it physically can't.**
 
 Payment-delegation protocols for AI agents — [AP2](https://github.com/google-agentic-commerce/AP2) (Google + 60+ orgs incl. Mastercard, PayPal, Coinbase), ACP (OpenAI + Stripe), x402 — define *how* a user authorizes an agent to pay: a signed "mandate" carrying scope and limits. **They define the format; they don't enforce it at runtime.** This is the missing piece: a gateway that cryptographically verifies the user's signed mandate and **fail-closed denies** anything out of scope — *before* a payment can happen.
 

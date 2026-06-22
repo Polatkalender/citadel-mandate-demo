@@ -98,8 +98,8 @@ asciinema rec --command 'cargo run' demo.cast
 **Building an agent on AP2 / ACP / x402?** Try this, then tell me what you're building and where
 runtime enforcement would help — open an issue or a discussion:
 
-- Issues: https://github.com/permitnetworks/citadel-mandate-demo/issues
-- Discussions: https://github.com/permitnetworks/citadel-mandate-demo/discussions
+- Issues: https://github.com/Polatkalender/citadel-mandate-demo/issues
+- Discussions: https://github.com/Polatkalender/citadel-mandate-demo/discussions
 
 ## License
 

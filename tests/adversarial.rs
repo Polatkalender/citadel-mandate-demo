@@ -258,6 +258,21 @@ fn c02_truncated_and_huge_inputs_denied_no_panic() {
     assert!(denied(&gw().authorize(&valid[..valid.len() / 2], &charge(MERCHANT, 100))));
 }
 
+#[test]
+fn c03_deeply_nested_json_denied_no_stack_overflow() {
+    // Deeply nested arrays — serde_json's recursion limit must reject this with
+    // an error (DENY), not blow the stack. (Surfaced by the audit probe.)
+    let depth = 100_000;
+    let mut s = String::with_capacity(depth * 2);
+    for _ in 0..depth {
+        s.push('[');
+    }
+    for _ in 0..depth {
+        s.push(']');
+    }
+    assert!(denied(&gw().authorize(s.as_bytes(), &charge(MERCHANT, 100))));
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  D. AUDIT INTEGRITY
 // ═══════════════════════════════════════════════════════════════════

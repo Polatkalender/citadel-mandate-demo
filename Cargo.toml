@@ -26,6 +26,11 @@ tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
 name = "citadel-mandate-demo"
 path = "src/main.rs"
 
+[dev-dependencies]
+# Adversarial / boundary tests construct and tamper mandates directly.
+chrono = { version = "0.4", features = ["serde"] }
+serde_json = "1"
+
 [profile.release]
 # Lean for fast, reliable demo/CI builds (no fat LTO).
 strip = true

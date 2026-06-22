@@ -1,0 +1,32 @@
+[package]
+name = "citadel-mandate-demo"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "Open demo: runtime enforcement of user-signed (Ed25519) AP2-style Intent Mandates for AI-agent payments."
+repository = "https://github.com/permitnetworks/citadel-mandate-demo"
+readme = "README.md"
+keywords = ["ai-agents", "payments", "ap2", "authorization", "ed25519"]
+categories = ["authentication", "cryptography"]
+
+[dependencies]
+ed25519-dalek = "2"
+base64 = "0.22"
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+thiserror = "2"
+# `serve` subcommand only — a real HTTP endpoint to put in front of an agent.
+axum = "0.7"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
+
+[[bin]]
+name = "citadel-mandate-demo"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

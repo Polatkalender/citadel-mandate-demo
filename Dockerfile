@@ -4,6 +4,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY tests ./tests
+COPY benches ./benches
 RUN cargo build --release
 
 # ── runtime ────────────────────────────────────────────────────────

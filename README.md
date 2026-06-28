@@ -68,6 +68,21 @@ cargo run -- mint --over    | curl -s localhost:8080/v1/authorize -H 'content-ty
 
 `mint` variants: `--valid` (default) · `--tamper` · `--expired` · `--over` · `--wrong`.
 
+## Security
+
+The fail-closed claim is backed by executable evidence, not assertions:
+
+- **[`tests/adversarial.rs`](tests/adversarial.rs)** — 26 active attack attempts
+  (signature forgery & tampering, key substitution, duplicate-key / type-confusion
+  wires, over-cap / wrong-merchant / expired evasion, malformed & oversized input).
+  Every attack is **denied**; run `cargo test`.
+- **[Security & Design report](docs/SECURITY-AND-DESIGN.md)** — threat model,
+  full attack-class results, what holds vs. the documented simplifications, and how
+  the demo maps to the production system.
+
+Verdict: within the demo's scope, the enforcement is **not bypassable** and does
+not panic on attacker-controlled input.
+
 ## Honest scope
 
 This is a focused, open demo of **Intent Mandate enforcement** — deliberately small so you can read it in one sitting.

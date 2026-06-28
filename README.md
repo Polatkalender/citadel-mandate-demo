@@ -47,6 +47,8 @@ merchant and amount and watch ALLOW/DENY live, no install. (Local: `playground/b
 
 ## What it does
 
+![architecture](docs/architecture.svg)
+
 ```
 signed mandate ──► verify Ed25519 signature ──► check scope (cap · merchant · currency · expiry) ──► ALLOW + token
                           │ fail                        │ fail

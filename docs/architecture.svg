@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 320" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <!-- card background (readable in light & dark GitHub themes) -->
+  <rect x="0" y="0" width="1000" height="320" rx="16" fill="#ffffff" stroke="#e7e7e2"/>
+  <text x="32" y="44" font-size="18" font-weight="700" fill="#14171c">Citadel — Intent Mandate enforcement</text>
+  <text x="32" y="66" font-size="13" fill="#586072">fail-closed: any gate can deny; a deny never becomes an allow</text>
+
+  <!-- helper styles via groups -->
+  <!-- input -->
+  <g>
+    <rect x="24" y="112" width="150" height="72" rx="12" fill="#fafafa" stroke="#e7e7e2"/>
+    <text x="99" y="144" font-size="13" font-weight="600" fill="#14171c" text-anchor="middle">signed mandate</text>
+    <text x="99" y="163" font-size="12" fill="#586072" text-anchor="middle">+ charge</text>
+  </g>
+  <path d="M178 148 H206" stroke="#c9ccd3" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- verify -->
+  <g>
+    <rect x="210" y="112" width="160" height="72" rx="12" fill="#eef0fe" stroke="#c7c9f9"/>
+    <text x="290" y="142" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Verify</text>
+    <text x="290" y="162" font-size="11.5" fill="#586072" text-anchor="middle">Ed25519 · canonical</text>
+  </g>
+  <path d="M374 148 H402" stroke="#c9ccd3" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- scope -->
+  <g>
+    <rect x="406" y="112" width="180" height="72" rx="12" fill="#eef0fe" stroke="#c7c9f9"/>
+    <text x="496" y="142" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Scope</text>
+    <text x="496" y="162" font-size="11" fill="#586072" text-anchor="middle">cap · merchant · currency · expiry</text>
+  </g>
+  <path d="M590 148 H618" stroke="#c9ccd3" stroke-width="2" marker-end="url(#a)"/>
+
+  <!-- budget -->
+  <g>
+    <rect x="622" y="112" width="150" height="72" rx="12" fill="#eef0fe" stroke="#c7c9f9"/>
+    <text x="697" y="142" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Budget</text>
+    <text x="697" y="162" font-size="11.5" fill="#586072" text-anchor="middle">cumulative cap</text>
+  </g>
+  <path d="M776 148 H804" stroke="#15803d" stroke-width="2" marker-end="url(#g)"/>
+
+  <!-- allow -->
+  <g>
+    <rect x="808" y="112" width="168" height="72" rx="12" fill="#edfcf2" stroke="#bbf0cf"/>
+    <text x="892" y="142" font-size="14" font-weight="700" fill="#15803d" text-anchor="middle">ALLOW</text>
+    <text x="892" y="162" font-size="11.5" fill="#586072" text-anchor="middle">+ token · audit</text>
+  </g>
+
+  <!-- deny lane -->
+  <path d="M290 184 V232 M496 184 V232 M697 184 V232" stroke="#f4cfca" stroke-width="2" stroke-dasharray="4 4"/>
+  <path d="M697 232 H360" stroke="#f4cfca" stroke-width="2"/>
+  <path d="M360 232 H332" stroke="#d6463a" stroke-width="2" marker-end="url(#r)"/>
+  <g>
+    <rect x="150" y="206" width="180" height="52" rx="12" fill="#fdf1f0" stroke="#f4cfca"/>
+    <text x="240" y="230" font-size="13" font-weight="700" fill="#d6463a" text-anchor="middle">DENY</text>
+    <text x="240" y="247" font-size="11" fill="#586072" text-anchor="middle">reason · audit · no token</text>
+  </g>
+
+  <!-- audit bar -->
+  <rect x="24" y="280" width="952" height="22" rx="8" fill="#fafafa" stroke="#e7e7e2"/>
+  <text x="500" y="295" font-size="11.5" fill="#586072" text-anchor="middle">tamper-evident audit chain — every decision (allow &amp; deny) recorded</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#c9ccd3"/></marker>
+    <marker id="g" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#15803d"/></marker>
+    <marker id="r" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#d6463a"/></marker>
+  </defs>
+</svg>

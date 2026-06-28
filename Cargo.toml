@@ -9,6 +9,9 @@ readme = "README.md"
 keywords = ["ai-agents", "payments", "ap2", "authorization", "ed25519"]
 categories = ["authentication", "cryptography"]
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 ed25519-dalek = "2"
 base64 = "0.22"
@@ -18,9 +21,17 @@ serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 thiserror = "2"
-# `serve` subcommand only — a real HTTP endpoint to put in front of an agent.
+
+# Native-only: the `serve` HTTP gateway (axum/tokio don't target wasm).
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 axum = "0.7"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
+
+# Wasm-only: bindings for the browser playground. `uuid`'s `js` feature wires
+# getrandom for wasm (uuid is compiled even though the wasm path doesn't mint v4).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+uuid = { version = "1", features = ["v4", "js"] }
 
 [[bin]]
 name = "citadel-mandate-demo"

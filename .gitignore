@@ -8,3 +8,4 @@
 .DS_Store
 /sdks/**/__pycache__/
 *.pyc
+/playground/pkg

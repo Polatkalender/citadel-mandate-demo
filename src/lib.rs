@@ -27,8 +27,15 @@ pub mod mandate;
 pub mod protocol;
 pub mod scenarios;
 pub mod scope;
-pub mod serve;
 pub mod token;
+
+// The HTTP gateway uses axum/tokio, which don't target wasm.
+#[cfg(not(target_arch = "wasm32"))]
+pub mod serve;
+
+// Browser playground bindings.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
 
 /// SHA-256 of `bytes`.
 pub fn sha256(bytes: &[u8]) -> [u8; 32] {

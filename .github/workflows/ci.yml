@@ -49,3 +49,16 @@ jobs:
         run: pip install cryptography
       - name: cross-language check (SDK signs, Rust verifies)
         run: bash sdks/check.sh
+
+  wasm:
+    name: wasm playground build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: build playground wasm
+        run: wasm-pack build --target web --out-dir playground/pkg --no-typescript

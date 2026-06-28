@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Citadel — Intent Mandate playground</title>
+<style>
+  :root{
+    --ink:#14171c; --muted:#586072; --hair:#e7e7e2; --accent:#4f46e5;
+    --green:#15803d; --green-bg:#edfcf2; --red:#d6463a; --red-bg:#fdf1f0;
+    --mono:"Cascadia Code",Consolas,"SF Mono",ui-monospace,monospace;
+    --sans:"Segoe UI",-apple-system,Inter,Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{font-family:var(--sans); color:var(--ink); background:#f4f4f1; margin:0; padding:40px 20px;}
+  .wrap{max-width:880px; margin:0 auto;}
+  .kick{font-family:var(--mono); font-size:12px; letter-spacing:.28em; text-transform:uppercase; color:var(--accent);}
+  h1{font-size:30px; letter-spacing:-.02em; margin:8px 0 4px;}
+  .sub{color:var(--muted); margin:0 0 26px; font-size:15px;}
+  .card{background:#fff; border:1px solid var(--hair); border-radius:14px; padding:24px; box-shadow:0 1px 3px rgba(20,23,28,.05);}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 22px;}
+  label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:6px;}
+  input[type=text],input[type=number]{width:100%; font-family:var(--mono); font-size:14px; padding:9px 11px; border:1px solid var(--hair); border-radius:9px; color:var(--ink);}
+  .checks{display:flex; gap:24px; margin-top:16px; font-size:14px; color:var(--ink);}
+  .checks label{display:flex; align-items:center; gap:7px; font-weight:500; color:var(--ink); margin:0;}
+  .presets{display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0;}
+  .presets button{font-family:var(--mono); font-size:12px; padding:6px 11px; border:1px solid var(--hair); border-radius:999px; background:#fafafa; cursor:pointer; color:var(--muted);}
+  .presets button:hover{border-color:var(--accent); color:var(--accent);}
+  .result{margin-top:22px; border:1px solid var(--hair); border-radius:14px; padding:22px; display:flex; align-items:center; gap:18px;}
+  .badge{font-family:var(--mono); font-weight:700; font-size:16px; letter-spacing:.05em; padding:8px 16px; border-radius:9px;}
+  .allow{color:var(--green); background:var(--green-bg); border:1px solid #bbf0cf;}
+  .deny{color:var(--red); background:var(--red-bg); border:1px solid #f4cfca;}
+  .detail{font-size:14px; color:var(--muted);}
+  .detail .tok{font-family:var(--mono); color:var(--accent);}
+  .canon{margin-top:16px; font-family:var(--mono); font-size:11.5px; color:var(--muted); background:#fafafa; border:1px solid var(--hair); border-radius:10px; padding:12px 14px; word-break:break-all; line-height:1.5;}
+  .canon b{color:var(--ink);}
+  .foot{margin-top:22px; font-size:12.5px; color:var(--muted);}
+  a{color:var(--accent); text-decoration:none;}
+  .err{color:var(--red); font-family:var(--mono); font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">Citadel · open demo</div>
+  <h1>Intent Mandate playground</h1>
+  <p class="sub">Tweak the mandate and the charge — watch the gateway <b>allow</b> or <b>deny</b> live.
+     This runs the <b>real Rust enforcement core</b>, compiled to WebAssembly, in your browser.</p>
+
+  <div class="card">
+    <div class="grid">
+      <div><label>Mandate cap (USD)</label><input id="cap" type="number" value="150" min="0"></div>
+      <div><label>Allowed merchants (comma-sep)</label><input id="merchants" type="text" value="acme"></div>
+      <div><label>Charge merchant</label><input id="cmerch" type="text" value="acme"></div>
+      <div><label>Charge amount (USD)</label><input id="camt" type="number" value="120" min="0"></div>
+    </div>
+    <div class="checks">
+      <label><input id="expired" type="checkbox"> mandate expired</label>
+      <label><input id="tamper" type="checkbox"> tamper signature</label>
+    </div>
+    <div class="presets">
+      <button data-p="valid">valid ($120, cap $150)</button>
+      <button data-p="over">$5,000 vs cap $150</button>
+      <button data-p="wrong">wrong merchant</button>
+      <button data-p="expired">expired</button>
+      <button data-p="tamper">tampered signature</button>
+    </div>
+
+    <div class="result" id="result">
+      <span class="badge" id="badge">…</span>
+      <span class="detail" id="detail">loading wasm…</span>
+    </div>
+    <div class="canon" id="canon"></div>
+  </div>
+
+  <p class="foot">Same canonicalization &amp; rules as the production core (and the
+    <a href="../sdks/">TS / Python SDKs</a>). Source:
+    <a href="https://github.com/Polatkalender/citadel-mandate-demo">github.com/Polatkalender/citadel-mandate-demo</a></p>
+</div>
+
+<script type="module">
+  import init, { decide } from "./pkg/citadel_mandate_demo.js";
+
+  const $ = (id) => document.getElementById(id);
+  const els = ["cap","merchants","cmerch","camt","expired","tamper"].map($);
+
+  function run() {
+    const capCents = Math.round((parseFloat($("cap").value) || 0) * 100);
+    const chargeCents = Math.round((parseFloat($("camt").value) || 0) * 100);
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const expiresUnix = $("expired").checked ? 0 : nowUnix + 10 * 365 * 24 * 3600;
+    let res;
+    try {
+      res = JSON.parse(decide(
+        BigInt(capCents), $("merchants").value, $("cmerch").value,
+        BigInt(chargeCents), BigInt(expiresUnix), BigInt(nowUnix), $("tamper").checked
+      ));
+    } catch (e) {
+      $("detail").innerHTML = '<span class="err">' + e + '</span>';
+      return;
+    }
+    const allow = res.decision === "allow";
+    const badge = $("badge");
+    badge.textContent = allow ? "ALLOW" : "DENIED";
+    badge.className = "badge " + (allow ? "allow" : "deny");
+    $("detail").innerHTML = allow
+      ? 'token <span class="tok">' + res.token_id + '</span> minted · audited'
+      : res.reason + " · audited, no token";
+    $("canon").innerHTML = "<b>signed canonical bytes</b><br>" + res.canonical;
+  }
+
+  const PRESETS = {
+    valid:   {cap:150, merchants:"acme", cmerch:"acme", camt:120, expired:false, tamper:false},
+    over:    {cap:150, merchants:"acme", cmerch:"acme", camt:5000, expired:false, tamper:false},
+    wrong:   {cap:150, merchants:"acme", cmerch:"evil.sh", camt:120, expired:false, tamper:false},
+    expired: {cap:150, merchants:"acme", cmerch:"acme", camt:120, expired:true, tamper:false},
+    tamper:  {cap:150, merchants:"acme", cmerch:"acme", camt:120, expired:false, tamper:true},
+  };
+  document.querySelectorAll(".presets button").forEach((b) => b.addEventListener("click", () => {
+    const p = PRESETS[b.dataset.p];
+    $("cap").value = p.cap; $("merchants").value = p.merchants; $("cmerch").value = p.cmerch;
+    $("camt").value = p.camt; $("expired").checked = p.expired; $("tamper").checked = p.tamper;
+    run();
+  }));
+
+  await init();
+  els.forEach((el) => el.addEventListener("input", run));
+  run();
+</script>
+</body>
+</html>

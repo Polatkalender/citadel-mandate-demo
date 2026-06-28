@@ -84,6 +84,22 @@ The fail-closed claim is backed by executable evidence, not assertions:
 Verdict: within the demo's scope, the enforcement is **not bypassable** and does
 not panic on attacker-controlled input.
 
+The verifier is also **fuzzed**: [`fuzz/fuzz_targets/verify.rs`](fuzz/fuzz_targets/verify.rs)
+runs `verify_signed` on arbitrary bytes (`cargo +nightly fuzz run verify`), and
+[`tests/properties.rs`](tests/properties.rs) asserts invariants over thousands of
+randomly generated mandates (proptest, in CI).
+
+## Performance
+
+Single core, release build (`cargo bench`, median):
+
+| Operation | Latency | Throughput / core |
+|---|---|---|
+| `verify_signed` (Ed25519 + canonical hash) | ~79 µs | ~12,600 / s |
+| full `authorize` (verify → scope → budget → token → audit) | ~124 µs | ~8,000 / s |
+
+Inline enforcement adds sub-millisecond latency to a payment decision.
+
 ## Honest scope
 
 This is a focused, open demo of **Intent Mandate enforcement** — deliberately small so you can read it in one sitting.

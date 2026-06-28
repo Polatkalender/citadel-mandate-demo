@@ -1,0 +1,24 @@
+# Coverage-guided fuzzing of the verification core.
+# Run with nightly + cargo-fuzz:  cargo +nightly fuzz run verify
+# This is its own workspace so the parent crate's normal build/CI ignores it.
+[package]
+name = "citadel-mandate-demo-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+citadel-mandate-demo = { path = ".." }
+
+[[bin]]
+name = "verify"
+path = "fuzz_targets/verify.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]

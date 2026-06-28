@@ -1,4 +1,8 @@
 /target
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+/fuzz/Cargo.lock
 **/*.rs.bk
 *.pdb
 .DS_Store

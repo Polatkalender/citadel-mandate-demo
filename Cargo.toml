@@ -30,6 +30,14 @@ path = "src/main.rs"
 # Adversarial / boundary tests construct and tamper mandates directly.
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
+# Property-based invariants (fuzz-lite, runs in `cargo test`).
+proptest = "1"
+# Throughput / latency benchmarks (`cargo bench`).
+criterion = "0.5"
+
+[[bench]]
+name = "enforcement"
+harness = false
 
 [profile.release]
 # Lean for fast, reliable demo/CI builds (no fat LTO).

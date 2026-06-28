@@ -62,3 +62,17 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: build playground wasm
         run: wasm-pack build --target web --out-dir playground/pkg --no-typescript
+
+  supply-chain:
+    name: cargo audit + cargo deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
+      - name: advisories (RUSTSEC)
+        run: cargo audit
+      - name: licenses · bans · sources · advisories
+        run: cargo deny check

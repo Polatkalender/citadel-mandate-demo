@@ -15,7 +15,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 ed25519-dalek = "2"
 base64 = "0.22"
-sha2 = "0.10"
+sha2 = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 chrono = { version = "0.4", features = ["serde"] }
@@ -24,7 +24,7 @@ thiserror = "2"
 
 # Native-only: the `serve` HTTP gateway (axum/tokio don't target wasm).
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-axum = "0.7"
+axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "macros"] }
 
 # Wasm-only: bindings for the browser playground. `uuid`'s `js` feature wires
@@ -44,11 +44,11 @@ serde_json = "1"
 # Property-based invariants (fuzz-lite, runs in `cargo test`).
 proptest = "1"
 # Throughput / latency benchmarks (`cargo bench`).
-criterion = "0.5"
+criterion = "0.8"
 # HTTP serve integration test (drives the axum router directly).
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tower = { version = "0.5", features = ["util"] }
-axum = "0.7"
+axum = "0.8"
 
 [[bench]]
 name = "enforcement"

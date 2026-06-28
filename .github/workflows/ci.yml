@@ -10,7 +10,7 @@ jobs:
     name: build · lint · test · demo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -27,7 +27,7 @@ jobs:
     name: docker build + run
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: build image
         run: docker build -t citadel-mandate-demo .
       - name: run the demo in the container

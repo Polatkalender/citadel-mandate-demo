@@ -72,10 +72,11 @@ cargo run -- mint --over    | curl -s localhost:8080/v1/authorize -H 'content-ty
 
 The fail-closed claim is backed by executable evidence, not assertions:
 
-- **[`tests/adversarial.rs`](tests/adversarial.rs)** — 26 active attack attempts
+- **[`tests/adversarial.rs`](tests/adversarial.rs)** — 29 adversarial tests
   (signature forgery & tampering, key substitution, duplicate-key / type-confusion
-  wires, over-cap / wrong-merchant / expired evasion, malformed & oversized input).
-  Every attack is **denied**; run `cargo test`.
+  wires, over-cap / wrong-merchant / expired evasion, cumulative-budget overrun,
+  token verification, malformed & oversized input). Every attack is **denied**;
+  run `cargo test`.
 - **[Security & Design report](docs/SECURITY-AND-DESIGN.md)** — threat model,
   full attack-class results, what holds vs. the documented simplifications, and how
   the demo maps to the production system.
@@ -92,7 +93,7 @@ This is a focused, open demo of **Intent Mandate enforcement** — deliberately 
 - The **audit log** and **token** here are simplified illustrations. The production system adds a Merkle-tree audit chain with **hybrid post-quantum** signatures (Ed25519 + ML-DSA-65) and RFC 9449 enclave-bound DPoP.
 - This demo holds no money and talks to no payment processor. It is the **decision + proof** layer.
 
-> **Security & design report:** [`docs/SECURITY-AND-DESIGN.md`](docs/SECURITY-AND-DESIGN.md) — full threat model + an adversarial test of every bypass vector (25 attack tests, all fail-closed).
+> **Security & design report:** [`docs/SECURITY-AND-DESIGN.md`](docs/SECURITY-AND-DESIGN.md) — full threat model + an adversarial test of every bypass vector (29 adversarial tests, all fail-closed).
 
 The full **Citadel** platform — mutual-TLS identity, the post-quantum signed audit chain, a policy
 engine, spend limits, kill-switch, and the multi-tenant/managed, fail-closed gateway — is a separate

@@ -10,8 +10,9 @@ use std::sync::{Arc, Mutex};
 use axum::extract::{DefaultBodyLimit, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::routing::post;
+use axum::routing::{get, post};
 use axum::{Json, Router};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::engine::{Gateway, Outcome};
@@ -102,10 +103,59 @@ async fn authorize(State(gw): State<Shared>, Json(req): Json<AuthorizeReq>) -> R
     (StatusCode::OK, Json(resp)).into_response()
 }
 
+#[derive(Deserialize)]
+struct VerifyReq {
+    token: String,
+}
+
+/// Resource-server side of the loop: verify a token this gateway minted.
+async fn verify(State(gw): State<Shared>, Json(req): Json<VerifyReq>) -> Response {
+    let vk = match gw.lock() {
+        Ok(g) => g.token_verifying_key(),
+        Err(_) => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({"valid": false, "reason": "gateway unavailable"})),
+            )
+                .into_response()
+        }
+    };
+    match crate::token::verify_token(&vk, &req.token, Utc::now().timestamp()) {
+        Ok(c) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "valid": true, "agent_id": c.agent_id, "jti": c.jti,
+                "action_hash": c.action_hash, "exp": c.exp,
+            })),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::OK,
+            Json(serde_json::json!({"valid": false, "reason": e.to_string()})),
+        )
+            .into_response(),
+    }
+}
+
+/// Prometheus metrics for decisions (observability).
+async fn metrics(State(gw): State<Shared>) -> Response {
+    match gw.lock() {
+        Ok(g) => (
+            StatusCode::OK,
+            [("content-type", "text/plain; version=0.0.4")],
+            g.metrics.prometheus(),
+        )
+            .into_response(),
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
 /// Build the gateway HTTP router (extracted so it can be tested directly).
 pub fn build_router(shared: Shared) -> Router {
     Router::new()
         .route("/v1/authorize", post(authorize))
+        .route("/v1/verify", post(verify))
+        .route("/metrics", get(metrics))
         .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
         .with_state(shared)
 }
@@ -126,10 +176,9 @@ pub fn run_blocking() {
             .await
             .expect("bind 0.0.0.0:8080");
         println!("citadel-mandate-demo gateway listening on http://{addr}");
-        println!("  POST /v1/authorize");
-        println!(
-            "  body: {{\"mandate\": <signed wire>, \"charge\": {{\"merchant\":..,\"amount_cents\":..,\"currency\":\"usd\"}}}}"
-        );
+        println!("  POST /v1/authorize   {{\"mandate\": <signed wire>, \"charge\": {{merchant, amount_cents, currency}}}}");
+        println!("  POST /v1/verify      {{\"token\": <compact token>}}  -> resource-server token check");
+        println!("  GET  /metrics        Prometheus decision counters");
         println!("  trusted user: {TRUSTED_USER}  (mint a request with: citadel-mandate-demo mint)");
         axum::serve(listener, app).await.expect("serve");
     });

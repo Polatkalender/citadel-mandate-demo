@@ -369,12 +369,56 @@ fn e01_empty_allowlist_permits_any_merchant_by_design() {
 }
 
 #[test]
-fn e02_no_replay_protection_same_mandate_reused() {
-    // The demo treats a mandate as a standing authorization: the same signed
-    // mandate + charge is accepted repeatedly (no nonce / spend accumulation).
+fn e02_spend_accumulates_so_replays_are_capped() {
+    // The mandate is a BUDGET, not a standing authorization: the same signed
+    // mandate + charge accumulates against the cap. cap 15_000, charge 12_000 ->
+    // first allow (spent 12_000), second would be 24_000 > cap -> DENIED.
     let mut g = gw();
     let w = signed_ok();
-    assert!(g.authorize(&w, &charge(MERCHANT, 100)).is_allow());
-    assert!(g.authorize(&w, &charge(MERCHANT, 100)).is_allow());
-    assert_eq!(g.audit.len(), 2);
+    assert!(g.authorize(&w, &charge(MERCHANT, 12_000)).is_allow());
+    assert!(
+        denied(&g.authorize(&w, &charge(MERCHANT, 12_000))),
+        "replay over cumulative budget is denied"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  F. TOKEN VERIFICATION  (the mint -> present -> verify loop)
+// ═══════════════════════════════════════════════════════════════════
+
+#[test]
+fn f01_token_verifies_with_gateway_key_only() {
+    use citadel_mandate_demo::token::{mint, verify_token};
+    let sk = test_key(200); // the gateway's token key
+    let now = chrono::Utc::now().timestamp();
+    let t = mint(&sk, "agent-x", &[9u8; 32], 300);
+
+    // Correct key -> valid.
+    assert!(verify_token(&sk.verifying_key(), &t.compact, now).is_ok());
+    // Wrong key -> rejected.
+    assert!(verify_token(&test_key(201).verifying_key(), &t.compact, now).is_err());
+    // Tampered compact -> rejected.
+    let tampered = format!("{}x", t.compact);
+    assert!(verify_token(&sk.verifying_key(), &tampered, now).is_err());
+    // Garbage -> rejected, no panic.
+    assert!(verify_token(&sk.verifying_key(), "not.a.token", now).is_err());
+}
+
+#[test]
+fn f02_expired_token_is_rejected() {
+    use citadel_mandate_demo::token::{mint, verify_token};
+    let sk = test_key(200);
+    let now = chrono::Utc::now().timestamp();
+    let t = mint(&sk, "agent-x", &[1u8; 32], -10); // already expired
+    assert!(verify_token(&sk.verifying_key(), &t.compact, now).is_err());
+}
+
+#[test]
+fn f03_metrics_count_allow_and_deny() {
+    let mut g = gw();
+    g.authorize(&signed_ok(), &charge(MERCHANT, 100)); // allow
+    g.authorize(b"junk", &charge(MERCHANT, 100)); // deny
+    g.authorize(&signed_ok(), &charge("evil.sh", 100)); // deny (scope)
+    assert_eq!(g.metrics.allowed, 1);
+    assert_eq!(g.metrics.denied, 2);
 }

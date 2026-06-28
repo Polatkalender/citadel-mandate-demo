@@ -18,7 +18,7 @@ works**, and the result of a **comprehensive adversarial test** of it.
 **Test verdict.** Within its stated scope (verify Ed25519 signature → check
 scope/limits → allow + token *or* deny + audit), the enforcement is **not
 bypassable** and does **not panic or crash on attacker-controlled input**. This
-is backed by **27 passing tests — 25 of them active attack attempts** — plus an
+is backed by **34 passing tests — 29 of them adversarial** — plus an
 independent multi-agent source audit. Every "weakness" found is a **documented,
 by-design simplification** of a mechanism that the full (separate) Citadel
 platform implements in hardened form — not a defect in the demo's security core.
@@ -135,7 +135,7 @@ signed mandate + charge
 
 ## 5. Adversarial test results
 
-### 5.1 Executable attack suite (`tests/adversarial.rs`, 25 tests — all pass)
+### 5.1 Executable attack suite (`tests/adversarial.rs`, 29 tests — all pass)
 
 **A. Signature / identity forgery (15) — all DENIED:**
 unsigned mandate · empty registry vs a perfect signature · signed by the wrong
@@ -157,7 +157,12 @@ malformed/empty/`null`/`[]` JSON → Deny · 2 MB junk and truncated wires → D
 the hash-chain verifies.
 
 **E. By-design behaviour, recorded (2):** empty `allowed_merchants` permits any
-merchant within cap; the same mandate may be reused (no replay protection).
+merchant within cap; a mandate is a **budget** — repeated charges accumulate
+against the cap and are denied once it is exhausted.
+
+**F. Token verification + observability (3):** a minted token verifies only with
+the gateway key, and a wrong key, tampered token, or expired token are all
+rejected; decision metrics count allow vs. deny.
 
 (plus `tests/enforcement.rs`: the 5 headline scenarios as hard assertions.)
 
@@ -208,11 +213,11 @@ obtain an unintended Allow in the demo's threat model.**
 | # | Demo behaviour | Why it is acceptable here | Production counterpart |
 |---|---|---|---|
 | L1 | Audit log is hash-chained but **not signed** | tamper-evident against mutation; demonstrates the idea | Merkle chain + **hybrid PQ** (Ed25519 + ML-DSA-65) signed tree-head |
-| L2 | Minted token is **never verified** inside the demo | shows issuance, not consumption | RFC 9449 **DPoP**, enclave-bound key, verified at the resource |
-| L3 | **No replay / nonce / spend accumulation** — a mandate is a standing authorization | keeps the demo stateless and readable | per-request nonce + stateful `SpendTracker` (daily/tx/rate caps) |
+| L2 | Token is a simplified Ed25519 DPoP-style token — **verifiable via `/v1/verify`**, but not enclave-bound | shows the full mint → present → verify loop | RFC 9449 **DPoP** with enclave-bound (HSM) keys |
+| L3 | Spend **accumulates against the cap** (budget); no per-request nonce for exact-duplicate dedup | demonstrates stateful limits, in-memory | per-request nonce + persistent `SpendTracker` (daily/tx/rate caps) |
 | L4 | Empty `allowed_merchants` = **any merchant** | matches "Intent with no merchant restriction" | policy engine can require an explicit allowlist |
-| L5 | HTTP body has **no custom size cap** (Axum's ~2 MB default applies) | bounded by the framework default | explicit body limits + rate limiting + mTLS L0 |
-| L6 | Gateway state is **in-memory**; the shared lock can poison on panic | single-process demo; request path doesn't panic | persistent stores; non-poisoning concurrency |
+| L5 | HTTP body has an **explicit 32 KiB cap**; no rate limiting yet | deliberate DoS bound at the demo layer | + rate limiting + mTLS L0 |
+| L6 | Gateway state is **in-memory**; a poisoned lock fails closed (**503**, no panic) | single-process demo | persistent stores; non-poisoning concurrency |
 | L7 | **Intent only**; **VC-style** (not full W3C VC / AP2 interop) | the focused wedge | Cart/Payment mandates; full protocol adapters |
 
 ---
@@ -259,7 +264,7 @@ the demo **and** `docker build`/`docker run` on clean Linux runners on every pus
 CLI) · `scenarios.rs` (107) · `serve.rs` (104, HTTP) · `engine.rs` (89,
 pipeline) · `audit.rs` (79) · `scope.rs` (51) · `token.rs` (50) · `lib.rs` (47).
 
-**Tests:** `adversarial.rs` (25 attacks) · `enforcement.rs` (5 scenarios).
+**Tests:** `adversarial.rs` (29 tests) · `enforcement.rs` (5 scenarios).
 
 **Runtime dependencies (all public):** `ed25519-dalek`, `base64`, `sha2`,
 `serde`/`serde_json`, `chrono`, `uuid`, `thiserror`, `axum`, `tokio`.

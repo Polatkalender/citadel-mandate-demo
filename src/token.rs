@@ -1,4 +1,5 @@
-//! DPoP-style proof token, minted ONLY on Allow.
+//! DPoP-style proof token, minted ONLY on Allow — and verifiable by a resource
+//! server.
 //!
 //! The token binds the agent and the action hash, carries a unique `jti` and an
 //! expiry, and is Ed25519-signed by the gateway. SIMPLIFIED illustration —
@@ -6,7 +7,8 @@
 
 use base64::Engine as _;
 use chrono::Utc;
-use ed25519_dalek::{Signer, SigningKey};
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
+use serde::Deserialize;
 
 const B64URL: base64::engine::general_purpose::GeneralPurpose =
     base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -47,4 +49,48 @@ pub fn mint(sk: &SigningKey, agent_id: &str, action_hash: &[u8; 32], ttl_secs: i
         exp,
         compact,
     }
+}
+
+/// The claims carried by a verified token.
+#[derive(Debug, Clone, Deserialize)]
+pub struct Claims {
+    pub jti: String,
+    pub agent_id: String,
+    pub action_hash: String,
+    pub exp: i64,
+}
+
+/// Errors are coarse and fail-closed: a token that does not fully verify is rejected.
+#[derive(Debug, thiserror::Error)]
+pub enum TokenError {
+    #[error("malformed token")]
+    Malformed,
+    #[error("token signature verification failed")]
+    BadSignature,
+    #[error("token expired")]
+    Expired,
+}
+
+/// Verify a compact token against the gateway's verifying key, returning its
+/// claims only if the signature is valid AND it has not expired.
+///
+/// FAIL-CLOSED: a malformed token, a bad signature, or an expired token all
+/// return `Err`. This is what a resource server runs before honouring the token
+/// (the mint → present → verify loop).
+pub fn verify_token(vk: &VerifyingKey, compact: &str, now_ts: i64) -> Result<Claims, TokenError> {
+    let (payload_b64, sig_b64) = compact.split_once('.').ok_or(TokenError::Malformed)?;
+    let payload = B64URL
+        .decode(payload_b64.as_bytes())
+        .map_err(|_| TokenError::Malformed)?;
+    let sig_bytes = B64URL
+        .decode(sig_b64.as_bytes())
+        .map_err(|_| TokenError::BadSignature)?;
+    let signature = Signature::from_slice(&sig_bytes).map_err(|_| TokenError::BadSignature)?;
+    vk.verify_strict(&payload, &signature)
+        .map_err(|_| TokenError::BadSignature)?;
+    let claims: Claims = serde_json::from_slice(&payload).map_err(|_| TokenError::Malformed)?;
+    if now_ts >= claims.exp {
+        return Err(TokenError::Expired);
+    }
+    Ok(claims)
 }

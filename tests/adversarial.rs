@@ -41,15 +41,25 @@ fn mandate(user: &str, max: u64, merchants: &[&str], expires: DateTime<Utc>) -> 
 }
 
 fn charge(merchant: &str, cents: u64) -> Charge {
-    Charge { merchant: merchant.into(), amount_cents: cents, currency: "usd".into() }
+    Charge {
+        merchant: merchant.into(),
+        amount_cents: cents,
+        currency: "usd".into(),
+    }
 }
 
 /// A genuinely-signed wire for the trusted user (seed-7), $150 cap, MERCHANT.
 fn signed_ok() -> Vec<u8> {
-    sign_mandate(&mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()), &test_key(7))
+    sign_mandate(
+        &mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()),
+        &test_key(7),
+    )
 }
 
-fn tamper<F: FnOnce(&mut serde_json::Map<String, serde_json::Value>)>(wire: &[u8], f: F) -> Vec<u8> {
+fn tamper<F: FnOnce(&mut serde_json::Map<String, serde_json::Value>)>(
+    wire: &[u8],
+    f: F,
+) -> Vec<u8> {
     let mut v: serde_json::Value = serde_json::from_slice(wire).unwrap();
     f(v.as_object_mut().unwrap());
     serde_json::to_vec(&v).unwrap()
@@ -66,7 +76,8 @@ fn denied(o: &Outcome) -> bool {
 #[test]
 fn a01_unsigned_mandate_denied() {
     // No signature_b64 at all → wire is structurally incomplete.
-    let unsigned = serde_json::to_vec(&mandate(TRUSTED_USER, 15_000, &[MERCHANT], future())).unwrap();
+    let unsigned =
+        serde_json::to_vec(&mandate(TRUSTED_USER, 15_000, &[MERCHANT], future())).unwrap();
     assert!(denied(&gw().authorize(&unsigned, &charge(MERCHANT, 100))));
 }
 
@@ -80,7 +91,10 @@ fn a02_empty_registry_denies_perfect_signature() {
 #[test]
 fn a03_attacker_key_denied() {
     // Signed by seed-9 (not the key registered for alice).
-    let w = sign_mandate(&mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()), &test_key(9));
+    let w = sign_mandate(
+        &mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()),
+        &test_key(9),
+    );
     assert!(denied(&gw().authorize(&w, &charge(MERCHANT, 100))));
 }
 
@@ -95,7 +109,10 @@ fn a04_raise_cap_after_signing_denied() {
 #[test]
 fn a05_add_merchant_after_signing_denied() {
     let w = tamper(&signed_ok(), |m| {
-        m.insert("allowed_merchants".into(), serde_json::json!([MERCHANT, "evil.sh"]));
+        m.insert(
+            "allowed_merchants".into(),
+            serde_json::json!([MERCHANT, "evil.sh"]),
+        );
     });
     assert!(denied(&gw().authorize(&w, &charge("evil.sh", 100))));
 }
@@ -119,7 +136,10 @@ fn a07_swap_agent_after_signing_denied() {
 #[test]
 fn a08_extend_expiry_after_signing_denied() {
     let w = tamper(&signed_ok(), |m| {
-        m.insert("expires_at".into(), serde_json::json!("2099-01-01T00:00:00Z"));
+        m.insert(
+            "expires_at".into(),
+            serde_json::json!("2099-01-01T00:00:00Z"),
+        );
     });
     assert!(denied(&gw().authorize(&w, &charge(MERCHANT, 100))));
 }
@@ -135,7 +155,10 @@ fn a09_garbage_signature_denied() {
 #[test]
 fn a10_non_base64_signature_denied() {
     let w = tamper(&signed_ok(), |m| {
-        m.insert("signature_b64".into(), serde_json::json!("!!!not base64!!!"));
+        m.insert(
+            "signature_b64".into(),
+            serde_json::json!("!!!not base64!!!"),
+        );
     });
     assert!(denied(&gw().authorize(&w, &charge(MERCHANT, 100))));
 }
@@ -145,7 +168,10 @@ fn a11_signature_swapped_from_another_mandate_denied() {
     // Lift a valid signature off mandate A; staple it onto a different body B.
     let a = signed_ok();
     let sig = serde_json::from_slice::<serde_json::Value>(&a).unwrap()["signature_b64"].clone();
-    let b = sign_mandate(&mandate(TRUSTED_USER, 999, &[MERCHANT], future()), &test_key(7));
+    let b = sign_mandate(
+        &mandate(TRUSTED_USER, 999, &[MERCHANT], future()),
+        &test_key(7),
+    );
     let forged = tamper(&b, |m| {
         m.insert("signature_b64".into(), sig);
     });
@@ -160,10 +186,16 @@ fn a12_low_level_verify_rejects_all_forgeries() {
         r
     };
     // unknown user
-    let u = sign_mandate(&mandate("nobody@x", 15_000, &[MERCHANT], future()), &test_key(7));
+    let u = sign_mandate(
+        &mandate("nobody@x", 15_000, &[MERCHANT], future()),
+        &test_key(7),
+    );
     assert!(verify_signed(&u, &reg).is_err());
     // wrong key
-    let k = sign_mandate(&mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()), &test_key(9));
+    let k = sign_mandate(
+        &mandate(TRUSTED_USER, 15_000, &[MERCHANT], future()),
+        &test_key(9),
+    );
     assert!(verify_signed(&k, &reg).is_err());
     // a valid one verifies
     assert!(verify_signed(&signed_ok(), &reg).is_ok());
@@ -175,7 +207,9 @@ fn a13_duplicate_key_wire_denied() {
     // check and the enforcement read different copies. serde must reject it.
     let s = String::from_utf8(signed_ok()).unwrap();
     let forged = s.replacen('{', "{\"max_amount_cents\":100000000,", 1);
-    assert!(denied(&gw().authorize(forged.as_bytes(), &charge(MERCHANT, 100))));
+    assert!(denied(
+        &gw().authorize(forged.as_bytes(), &charge(MERCHANT, 100))
+    ));
 }
 
 #[test]
@@ -205,13 +239,21 @@ fn a15_unknown_extra_field_is_inert_not_a_bypass() {
 #[test]
 fn b01_amount_at_cap_allowed_over_cap_denied() {
     let w = signed_ok(); // cap 15_000
-    assert!(gw().authorize(&w, &charge(MERCHANT, 15_000)).is_allow(), "at cap allowed");
-    assert!(denied(&gw().authorize(&w, &charge(MERCHANT, 15_001))), "1c over cap denied");
+    assert!(
+        gw().authorize(&w, &charge(MERCHANT, 15_000)).is_allow(),
+        "at cap allowed"
+    );
+    assert!(
+        denied(&gw().authorize(&w, &charge(MERCHANT, 15_001))),
+        "1c over cap denied"
+    );
 }
 
 #[test]
 fn b02_u64_max_amount_denied_no_overflow() {
-    assert!(denied(&gw().authorize(&signed_ok(), &charge(MERCHANT, u64::MAX))));
+    assert!(denied(
+        &gw().authorize(&signed_ok(), &charge(MERCHANT, u64::MAX))
+    ));
 }
 
 #[test]
@@ -220,23 +262,40 @@ fn b03_currency_mismatch_denied() {
     let w = signed_ok();
     let mut bad = charge(MERCHANT, 100);
     bad.currency = "eur".into();
-    assert!(denied(&{ let mut g = g; g.authorize(&w, &bad) }));
+    assert!(denied(&{
+        let mut g = g;
+        g.authorize(&w, &bad)
+    }));
 }
 
 #[test]
 fn b04_merchant_outside_allowlist_denied() {
-    assert!(denied(&gw().authorize(&signed_ok(), &charge("evil.sh", 100))));
+    assert!(denied(
+        &gw().authorize(&signed_ok(), &charge("evil.sh", 100))
+    ));
 }
 
 #[test]
 fn b05_expired_denied_valid_window_allowed() {
     // signed, but already expired
     let past = sign_mandate(
-        &mandate(TRUSTED_USER, 15_000, &[MERCHANT], Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap()),
+        &mandate(
+            TRUSTED_USER,
+            15_000,
+            &[MERCHANT],
+            Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap(),
+        ),
         &test_key(7),
     );
-    assert!(denied(&gw().authorize(&past, &charge(MERCHANT, 100))), "expired denied");
-    assert!(gw().authorize(&signed_ok(), &charge(MERCHANT, 100)).is_allow(), "in-window allowed");
+    assert!(
+        denied(&gw().authorize(&past, &charge(MERCHANT, 100))),
+        "expired denied"
+    );
+    assert!(
+        gw().authorize(&signed_ok(), &charge(MERCHANT, 100))
+            .is_allow(),
+        "in-window allowed"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -245,7 +304,12 @@ fn b05_expired_denied_valid_window_allowed() {
 
 #[test]
 fn c01_malformed_json_denied_no_panic() {
-    for junk in [b"{ not json".as_slice(), b"".as_slice(), b"[]".as_slice(), b"null".as_slice()] {
+    for junk in [
+        b"{ not json".as_slice(),
+        b"".as_slice(),
+        b"[]".as_slice(),
+        b"null".as_slice(),
+    ] {
         assert!(denied(&gw().authorize(junk, &charge(MERCHANT, 100))));
     }
 }
@@ -255,7 +319,9 @@ fn c02_truncated_and_huge_inputs_denied_no_panic() {
     let huge = vec![b'a'; 2_000_000];
     assert!(denied(&gw().authorize(&huge, &charge(MERCHANT, 100))));
     let valid = signed_ok();
-    assert!(denied(&gw().authorize(&valid[..valid.len() / 2], &charge(MERCHANT, 100))));
+    assert!(denied(
+        &gw().authorize(&valid[..valid.len() / 2], &charge(MERCHANT, 100))
+    ));
 }
 
 #[test]
@@ -270,7 +336,9 @@ fn c03_deeply_nested_json_denied_no_stack_overflow() {
     for _ in 0..depth {
         s.push(']');
     }
-    assert!(denied(&gw().authorize(s.as_bytes(), &charge(MERCHANT, 100))));
+    assert!(denied(
+        &gw().authorize(s.as_bytes(), &charge(MERCHANT, 100))
+    ));
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -295,7 +363,9 @@ fn d01_every_decision_audited_and_chain_verifies() {
 fn e01_empty_allowlist_permits_any_merchant_by_design() {
     // An Intent with NO merchant restriction authorizes any merchant within cap.
     let w = sign_mandate(&mandate(TRUSTED_USER, 15_000, &[], future()), &test_key(7));
-    assert!(gw().authorize(&w, &charge("anything.example", 100)).is_allow());
+    assert!(gw()
+        .authorize(&w, &charge("anything.example", 100))
+        .is_allow());
 }
 
 #[test]

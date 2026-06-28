@@ -41,9 +41,9 @@ Every `DENIED` is real fail-closed behaviour — the gateway actually verifies t
 signature and checks scope; it is not a scripted print. Every decision (allow *and* deny) is
 written to a tamper-evident audit log. A token is minted **only** on allow.
 
-**Prefer the browser?** [`playground/`](playground/) compiles the **real Rust core to
-WebAssembly** — tweak the cap, merchant and amount and watch ALLOW/DENY live
-(`playground/build.sh`, then serve it). CI builds the wasm on every push.
+**Prefer the browser? ▶ [Try it live](https://polatkalender.github.io/citadel-mandate-demo/)** —
+the [`playground/`](playground/) compiles the **real Rust core to WebAssembly**: tweak the cap,
+merchant and amount and watch ALLOW/DENY live, no install. (Local: `playground/build.sh`.)
 
 ## What it does
 

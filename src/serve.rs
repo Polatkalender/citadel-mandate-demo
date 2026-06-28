@@ -46,6 +46,10 @@ struct AuthorizeResp {
     reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     token_id: Option<String>,
+    /// The compact, verifiable token — present it to a resource server, which
+    /// checks it via `POST /v1/verify`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    token: Option<String>,
     audit_seq: u64,
     audit_head: String,
 }
@@ -84,11 +88,13 @@ async fn authorize(State(gw): State<Shared>, Json(req): Json<AuthorizeReq>) -> R
     let resp = match outcome {
         Outcome::Allow {
             token_id,
+            token,
             audit_seq,
         } => AuthorizeResp {
             decision: "allow".into(),
             reason: None,
             token_id: Some(token_id),
+            token: Some(token),
             audit_seq,
             audit_head,
         },
@@ -96,6 +102,7 @@ async fn authorize(State(gw): State<Shared>, Json(req): Json<AuthorizeReq>) -> R
             decision: "deny".into(),
             reason: Some(reason),
             token_id: None,
+            token: None,
             audit_seq,
             audit_head,
         },

@@ -18,8 +18,18 @@ use crate::token;
 /// The outcome of an authorization. A Deny never carries a token.
 #[derive(Debug, Clone)]
 pub enum Outcome {
-    Allow { token_id: String, audit_seq: u64 },
-    Deny { reason: String, audit_seq: u64 },
+    Allow {
+        /// Short, human-friendly id (for logs/UX).
+        token_id: String,
+        /// The compact, verifiable token to present to a resource server
+        /// (which checks it via [`crate::token::verify_token`] / `POST /v1/verify`).
+        token: String,
+        audit_seq: u64,
+    },
+    Deny {
+        reason: String,
+        audit_seq: u64,
+    },
 }
 
 impl Outcome {
@@ -161,6 +171,7 @@ impl Gateway {
         self.metrics.allowed += 1;
         Outcome::Allow {
             token_id: tok.id,
+            token: tok.compact,
             audit_seq: seq,
         }
     }

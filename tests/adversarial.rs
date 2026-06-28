@@ -422,3 +422,19 @@ fn f03_metrics_count_allow_and_deny() {
     assert_eq!(g.metrics.allowed, 1);
     assert_eq!(g.metrics.denied, 2);
 }
+
+#[test]
+fn f04_authorize_returns_a_verifiable_token() {
+    // Closes the loop: an Allow hands back a compact token that the gateway's
+    // own key verifies (what a resource server / POST /v1/verify does).
+    use citadel_mandate_demo::engine::Outcome;
+    use citadel_mandate_demo::token::verify_token;
+    let mut g = gw();
+    match g.authorize(&signed_ok(), &charge(MERCHANT, 100)) {
+        Outcome::Allow { token, .. } => {
+            let vk = g.token_verifying_key();
+            assert!(verify_token(&vk, &token, chrono::Utc::now().timestamp()).is_ok());
+        }
+        other => panic!("expected allow, got {other:?}"),
+    }
+}

@@ -56,6 +56,7 @@ fn run_demo() {
             Outcome::Allow {
                 token_id,
                 audit_seq,
+                ..
             } => {
                 format!("token {CYAN}{token_id}{RESET} {DIM}· audit #{audit_seq}{RESET}")
             }

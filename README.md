@@ -52,8 +52,14 @@ signed mandate ──► verify Ed25519 signature ──► check scope (cap · 
 
 - **Verify** — the user's detached Ed25519 signature over the canonical mandate content, against a trusted `user_id → key` registry. Unknown user, bad signature, or tampered body → deny.
 - **Scope** — amount cap, merchant allowlist, currency, expiry. Any violation → deny.
+- **Budget** — cumulative spend per mandate is tracked; once the cap is exhausted, further charges (incl. replays) → deny.
 - **Audit** — each decision chains into a hash-linked log (`sha256(prev || entry)`); altering or dropping any entry breaks `verify()`.
-- **Token** — on allow, an Ed25519-signed, action-bound, expiring proof token.
+- **Token** — on allow, an Ed25519-signed, action-bound, expiring proof token — verifiable via `/v1/verify`.
+
+**Protocol-neutral.** The enforcement core is one thing; the wire is pluggable.
+[`src/protocol.rs`](src/protocol.rs) ships a `MandateAdapter` trait with **native,
+AP2-style and ACP-style** adapters — different mandate shapes mapped onto the same
+core, so the gateway enforces all of them identically (`authorize_with(&Ap2, …)`).
 
 ### Try it as an HTTP gateway
 
@@ -105,7 +111,7 @@ Inline enforcement adds sub-millisecond latency to a payment decision.
 This is a focused, open demo of **Intent Mandate enforcement** — deliberately small so you can read it in one sitting.
 
 - **Intent Mandates only.** No Cart or Payment mandates.
-- **VC-style Ed25519** signatures over the canonical mandate content. This is **not** full W3C Verifiable Credential or AP2 wire interop.
+- **VC-style Ed25519** signatures over the canonical mandate content. The AP2 / ACP adapters use **realistic mandate shapes**, not certified W3C Verifiable Credential / JWS wire interop.
 - The **audit log** and **token** here are simplified illustrations. The production system adds a Merkle-tree audit chain with **hybrid post-quantum** signatures (Ed25519 + ML-DSA-65) and RFC 9449 enclave-bound DPoP.
 - This demo holds no money and talks to no payment processor. It is the **decision + proof** layer.
 

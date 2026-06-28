@@ -96,22 +96,38 @@ pub fn verify_signed(
 ) -> Result<IntentMandate, VerifyError> {
     let wire: Wire =
         serde_json::from_slice(wire_json).map_err(|e| VerifyError::Malformed(e.to_string()))?;
+    verify_detached(
+        &wire.mandate.user_id,
+        &wire.mandate.signed_payload(),
+        &wire.signature_b64,
+        registry,
+    )?;
+    Ok(wire.mandate)
+}
 
-    // Resolve the user's trusted key first (unknown user => deny).
+/// The reusable signature-verification core: resolve `user_id`'s trusted key and
+/// verify a detached Ed25519 signature (base64) over `signed_bytes`. Used by the
+/// native path and by every protocol adapter (see [`crate::protocol`]).
+///
+/// **FAIL-CLOSED:** unknown user, malformed signature, or a signature that does
+/// not verify all return `Err`.
+pub fn verify_detached(
+    user_id: &str,
+    signed_bytes: &[u8],
+    signature_b64: &str,
+    registry: &MandateKeyRegistry,
+) -> Result<(), VerifyError> {
     let vk = registry
-        .get(&wire.mandate.user_id)
-        .ok_or_else(|| VerifyError::UnknownUser(wire.mandate.user_id.clone()))?;
-
-    // Decode + verify the detached Ed25519 signature over the canonical payload.
+        .get(user_id)
+        .ok_or_else(|| VerifyError::UnknownUser(user_id.to_string()))?;
     let sig_bytes = B64
-        .decode(wire.signature_b64.as_bytes())
+        .decode(signature_b64.as_bytes())
         .map_err(|_| VerifyError::BadSignature)?;
     let signature = Signature::from_slice(&sig_bytes).map_err(|_| VerifyError::BadSignature)?;
-    let digest = crate::sha256(&wire.mandate.signed_payload());
+    let digest = crate::sha256(signed_bytes);
     vk.verify_strict(&digest, &signature)
         .map_err(|_| VerifyError::BadSignature)?;
-
-    Ok(wire.mandate)
+    Ok(())
 }
 
 /// Sign a mandate with the user's key, returning the wire JSON bytes

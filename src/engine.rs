@@ -10,7 +10,8 @@ use chrono::Utc;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 
 use crate::audit::AuditLog;
-use crate::mandate::{verify_signed, MandateKeyRegistry};
+use crate::mandate::{IntentMandate, MandateKeyRegistry};
+use crate::protocol::{MandateAdapter, Native};
 use crate::scope::{check_scope, Charge};
 use crate::token;
 
@@ -85,15 +86,34 @@ impl Gateway {
         }
     }
 
-    /// Run a mandate + charge through the pipeline. Returns [`Outcome`] and
-    /// always records exactly one audit entry.
+    /// Run a mandate + charge through the pipeline using the demo's native wire
+    /// format. Returns [`Outcome`] and always records exactly one audit entry.
     pub fn authorize(&mut self, wire_json: &[u8], charge: &Charge) -> Outcome {
-        // 1. Cryptographic verification (fail-closed).
-        let mandate = match verify_signed(wire_json, &self.registry) {
-            Ok(m) => m,
-            Err(e) => return self.deny(format!("DENY verify: {e}"), e.to_string()),
-        };
+        self.authorize_with(&Native, wire_json, charge)
+    }
 
+    /// Same pipeline, but the wire is parsed and verified by a protocol
+    /// [`MandateAdapter`] (AP2, ACP, …). The enforcement core — scope, budget,
+    /// audit, token — is identical regardless of source protocol. This is the
+    /// "neutral control plane" in one method.
+    pub fn authorize_with<A: MandateAdapter>(
+        &mut self,
+        adapter: &A,
+        wire_json: &[u8],
+        charge: &Charge,
+    ) -> Outcome {
+        // 1. Protocol-specific parse + cryptographic verification (fail-closed).
+        match adapter.parse_verify(wire_json, &self.registry) {
+            Ok(mandate) => self.enforce(mandate, charge),
+            Err(e) => self.deny(
+                format!("DENY verify[{}]: {e}", adapter.name()),
+                e.to_string(),
+            ),
+        }
+    }
+
+    /// Scope -> budget -> token -> audit, on an already-verified neutral mandate.
+    fn enforce(&mut self, mandate: IntentMandate, charge: &Charge) -> Outcome {
         // 2. Scope enforcement — per-charge cap, merchant, currency, expiry.
         if let Err(reason) = check_scope(&mandate, charge, Utc::now()) {
             return self.deny(

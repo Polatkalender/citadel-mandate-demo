@@ -24,6 +24,7 @@
 pub mod audit;
 pub mod engine;
 pub mod mandate;
+pub mod protocol;
 pub mod scenarios;
 pub mod scope;
 pub mod serve;

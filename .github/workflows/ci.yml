@@ -32,3 +32,20 @@ jobs:
         run: docker build -t citadel-mandate-demo .
       - name: run the demo in the container
         run: docker run --rm citadel-mandate-demo
+
+  sdk:
+    name: cross-language SDKs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: install python crypto
+        run: pip install cryptography
+      - name: cross-language check (SDK signs, Rust verifies)
+        run: bash sdks/check.sh

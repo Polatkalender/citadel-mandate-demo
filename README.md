@@ -74,6 +74,19 @@ cargo run -- mint --over    | curl -s localhost:8080/v1/authorize -H 'content-ty
 
 `mint` variants: `--valid` (default) · `--tamper` · `--expired` · `--over` · `--wrong`.
 
+### Sign from your language
+
+Agents aren't written in Rust — so [`sdks/`](sdks/) has tiny **TypeScript/Node**
+(zero-dependency) and **Python** SDKs that sign a mandate the gateway accepts:
+
+```bash
+node sdks/ts/sign.mjs     | cargo run -q --example verify_wire -- acme 12000   # -> ALLOW
+python sdks/python/sign.py | cargo run -q --example verify_wire -- acme 12000  # -> ALLOW
+```
+
+Both emit **byte-identical canonical bytes** and round-trip through the Rust
+verifier — proven cross-language in CI ([`sdks/check.sh`](sdks/check.sh)).
+
 ## Security
 
 The fail-closed claim is backed by executable evidence, not assertions:

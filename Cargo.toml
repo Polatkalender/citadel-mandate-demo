@@ -53,3 +53,9 @@ harness = false
 [profile.release]
 # Lean for fast, reliable demo/CI builds (no fat LTO).
 strip = true
+
+# wasm-pack runs wasm-opt, whose bundled validator rejects the bulk-memory ops
+# rustc emits by default for wasm32. The playground doesn't need that size pass,
+# so skip it (keeps the wasm build green without pinning binaryen).
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

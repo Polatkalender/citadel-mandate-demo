@@ -93,6 +93,16 @@ python sdks/python/sign.py | cargo run -q --example verify_wire -- acme 12000  #
 Both emit **byte-identical canonical bytes** and round-trip through the Rust
 verifier — proven cross-language in CI ([`sdks/check.sh`](sdks/check.sh)).
 
+### Put it in front of an agent
+
+[`examples/agent_loop.rs`](examples/agent_loop.rs) is a tiny shopping agent that
+authorizes every payment through the gateway before it spends — it pays on ALLOW
+and is blocked on DENY (over-budget, wrong merchant):
+
+```bash
+cargo run --example agent_loop
+```
+
 ## Security
 
 The fail-closed claim is backed by executable evidence, not assertions:
